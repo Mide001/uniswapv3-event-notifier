@@ -1,8 +1,9 @@
-require('dotenv').config();
-const express = require('express');
-const ethers = require('ethers');
-const uniswapV3 = require('./abis/Uniswap-V3.json');
-const fetch = require('node-fetch');
+require("dotenv").config();
+const express = require("express");
+const ethers = require("ethers");
+const uniswapV3 = require("./abis/Uniswap-V3.json");
+const uniswapV2 = require("./abis/Uniswap-V2.json");
+const fetch = require("node-fetch");
 
 const app = express();
 const port = process.env.PORT;
@@ -10,29 +11,29 @@ const port = process.env.PORT;
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 
-const uniswapV3Contract = "0x1F98431c8aD98523631AE4a59f267346ea31F984";
+const uniswapV3ContractAddress = "0x1F98431c8aD98523631AE4a59f267346ea31F984";
+const uniswapV2ContractAddress = "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f";
 const provider = new ethers.providers.WebSocketProvider(
-    `wss://eth-mainnet.g.alchemy.com/v2/wEwSmlha_J-gyLgXYUR1gUpikFiaeON2`
+  `wss://eth-mainnet.g.alchemy.com/v2/wEwSmlha_J-gyLgXYUR1gUpikFiaeON2`
 );
 
 app.use(express.json());
 
-app.post('/poolCreated', async (req, res) => {
-    const { token0, token1, fee, tickSpacing, pool } = req.body;
+app.post("/poolCreated", async (req, res) => {
+  const { token0, token1, fee, tickSpacing, pool, isV2 } = req.body;
 
-    let info = {
-        token0: token0,
-        token1: token1,
-        fee: fee,
-        tickSpacing: tickSpacing,
-        pool: pool,
-    }
+  let info = {
+    token0: token0,
+    token1: token1,
+    fee: fee,
+    tickSpacing: tickSpacing,
+    pool: pool,
+  };
 
-    console.log(JSON.stringify(info, null, 5));
+  console.log(JSON.stringify(info, null, 5));
 
-
-    const message = `
-New Liquidity Pool found on Uniswap V3 Detected!
+  const message = `
+New Liquidity Pool found on ${isV2 ? 'Uniswap V2' : 'Uniswap V3'}  Detected!
 
 Token A: ${info.token0}
 Token B: ${info.token1}
@@ -43,52 +44,71 @@ Dextools info: [Dextools](https://www.dextools.io/app/en/ether/pair-explorer/${i
 Powered by Demeter-Labs
 `;
 
+  await sendToTelegram(message);
 
-
-    await sendToTelegram(message);
-
-
-    res.status(200).json({ success: true });
+  res.status(200).json({ success: true });
 });
 
 async function sendToTelegram(message) {
-    const apiUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
-    const params = {
-        chat_id: CHAT_ID,
-        text: message,
-    };
+  const apiUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+  const params = {
+    chat_id: CHAT_ID,
+    text: message,
+  };
 
-    const response = await fetch(`${apiUrl}?${new URLSearchParams(params)}`, {
-        method: 'GET'
-    });
+  const response = await fetch(`${apiUrl}?${new URLSearchParams(params)}`, {
+    method: "GET",
+  });
 
-    const data = await response.json();
+  const data = await response.json();
 
-    if (!data.ok) {
-        console.error('Failed to send message to Telegram:', data);
-    }
+  if (!data.ok) {
+    console.error("Failed to send message to Telegram:", data);
+  }
 }
 
-const contract = new ethers.Contract(uniswapV3Contract, uniswapV3, provider);
-contract.on("PoolCreated", async (token0, token1, fee, tickSpacing, pool) => {
-    const info = {
-        token0,
-        token1,
-        fee,
-        tickSpacing,
-        pool,
-    };
+const uniswapV3Contract = new ethers.Contract(uniswapV3ContractAddress, uniswapV3, provider);
+const uniswapV2Contract = new ethers.Contract(uniswapV2ContractAddress, uniswapV2, provider);
+uniswapV3Contract.on("PoolCreated", async (token0, token1, fee, tickSpacing, pool) => {
+  const info = {
+    token0: token0,
+    token1: token1,
+    fee: fee,
+    tickSpacing: tickSpacing,
+    pool: pool,
+    isV2: false,
+  };
 
+  // Trigger the /poolCreated endpoint with the event data
+  await fetch(`https://uniswapv3-event-notifier.onrender.com/poolCreated`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(info),
+  });
+});
+
+uniswapV2Contract.on("PairCreated", async (token0, token1, pair, noname) => {
+    let info = {
+        token0: token0,
+        token1: token1,
+        fee: null,
+        tickSpacing: null,
+        pool: pair,
+        isV2: true,
+    };
+    
     // Trigger the /poolCreated endpoint with the event data
-    await fetch(`https://uniswapv3-event-notifier.onrender.com/poolCreated`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(info),
-    });
+  await fetch(`http://localhost:${port}/poolCreated`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(info),
+  });
 });
 
 app.listen(port, () => {
-    console.log(`Server is running at http://localhost:${port}`);
+  console.log(`Server is running at http://localhost:${port}`);
 });
