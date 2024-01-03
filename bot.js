@@ -32,7 +32,38 @@ app.post("/poolCreated", async (req, res) => {
 
   console.log(JSON.stringify(info, null, 5));
 
-  const message = `
+  const now = new Date();
+const options = {
+  weekday: 'long',
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric',
+  hour: 'numeric',
+  minute: 'numeric',
+  second: 'numeric',
+  timeZoneName: 'short',
+};
+
+const formattedDate = now.toLocaleString('en-US', options);
+
+const message = `
+New Liquidity Pool found on ${isV2 ? 'Uniswap V2' : 'Uniswap V3'}  Detected!
+
+Token A: ${info.token0}
+Token B: ${info.token1}
+
+Dexscreener info: [Dexscreener](https://dexscreener.com/ethereum/${info.pool})
+Dextools info: [Dextools](https://www.dextools.io/app/en/ether/pair-explorer/${info.pool})
+
+Date and Time: ${formattedDate}
+
+Powered by Demeter-Labs
+`;
+
+console.log(message);
+
+
+ /* const message = `
 New Liquidity Pool found on ${isV2 ? 'Uniswap V2' : 'Uniswap V3'}  Detected!
 
 Token A: ${info.token0}
@@ -42,7 +73,7 @@ Dexscreener info: [Dexscreener](https://dexscreener.com/ethereum/${info.pool})
 Dextools info: [Dextools](https://www.dextools.io/app/en/ether/pair-explorer/${info.pool})
 
 Powered by Demeter-Labs
-`;
+`; */
 
   await sendToTelegram(message);
 
