@@ -31,7 +31,17 @@ app.post('/poolCreated', async (req, res) => {
     console.log(JSON.stringify(info, null, 5));
 
 
-    await sendToTelegram(JSON.stringify(info, null, 5));
+    const message = `
+New Liquidity Pool found on Uniswap V3 Detected!
+Token A: ${info.token0}
+Token B: ${info.token1}
+More info: [Dexscreener](https://dexscreener.com/ethereum/${info.pool})
+More info: [Dextools](https://www.dextools.io/app/en/ether/pair-explorer/${info.pool})
+Powered by Demeter-Labs
+`;
+
+
+    await sendToTelegram(message);
 
 
     res.status(200).json({ success: true });
