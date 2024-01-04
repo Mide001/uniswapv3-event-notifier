@@ -111,7 +111,7 @@ uniswapV3Contract.on("PoolCreated", async (token0, token1, fee, tickSpacing, poo
   };
 
   // Trigger the /poolCreated endpoint with the event data
-  await fetch(`https://uniswapv3-event-notifier.onrender.com/poolCreated`, {
+  await fetch(`http://localhost:${port}/poolCreated`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
