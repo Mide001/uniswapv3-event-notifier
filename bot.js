@@ -6,7 +6,9 @@ const uniswapV2 = require("./abis/Uniswap-V2.json");
 const fetch = require("node-fetch");
 const TelegramBot = require("node-telegram-bot-api");
 
-const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN);
+const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, {
+    polling: true
+});
 
 const app = express();
 const port = process.env.PORT;
