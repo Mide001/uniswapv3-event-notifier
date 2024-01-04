@@ -72,19 +72,23 @@ bot.onText(/\/subscribe/, (msg) => {
 });
 
 bot.onText(/\/unsubscribe/, (msg) => {
-  const chatId = msg.chat.id;
-
-  if (!subscribed_users || !subscribed_users.includes(chatId)) {
-    bot.sendMessage(chatId, "You're not subscribed to the newsletter!");
-    return;
-  }
-
-  // Filter out the user and update the store
-  const newArr = subscribed_users.filter((userId) => userId !== chatId);
-  store.set("subscribed", newArr);
-
-  bot.sendMessage(chatId, "You're unsubscribed from the newsletter!");
-});
+    const chatId = msg.chat.id;
+  
+    if (!subscribed_users || !subscribed_users.includes(chatId)) {
+      bot.sendMessage(chatId, "You're not subscribed to the newsletter!");
+      return;
+    }
+  
+    // Filter out the user and update the store
+    const newArr = subscribed_users.filter((userId) => userId !== chatId);
+    store.set("subscribed", newArr);
+  
+    // Reassign the updated array to subscribed_users
+    subscribed_users = newArr;
+  
+    bot.sendMessage(chatId, "You're unsubscribed from the newsletter!");
+  });
+  
 
 app.post("/poolCreated", async (req, res) => {
   try {
