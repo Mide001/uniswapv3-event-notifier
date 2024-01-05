@@ -12,7 +12,7 @@ const app = express();
 const port = process.env.PORT;
 
 var store = require("store");
-var subscribed_users = store.get("subscribed") || [];
+var subscribed_users = store.get("subscribed");
 
 let types = ["uint256", "address"];
 
