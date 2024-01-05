@@ -6,15 +6,13 @@ const uniswapV2 = require("./abis/Uniswap-V2.json");
 const fetch = require("node-fetch");
 const TelegramBot = require("node-telegram-bot-api");
 
-const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, {
-    polling: true
-});
+const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN);
 
 const app = express();
 const port = process.env.PORT;
 
 var store = require("store");
-var subscribed_users = store.get("subscribed");
+var subscribed_users = store.get("subscribed") || [];
 
 let types = ["uint256", "address"];
 
@@ -72,53 +70,49 @@ bot.onText(/\/subscribe/, (msg) => {
 });
 
 bot.onText(/\/unsubscribe/, (msg) => {
-    const chatId = msg.chat.id;
-  
-    if (!subscribed_users || !subscribed_users.includes(chatId)) {
-      bot.sendMessage(chatId, "You're not subscribed to the newsletter!");
-      return;
-    }
-  
-    // Filter out the user and update the store
-    const newArr = subscribed_users.filter((userId) => userId !== chatId);
-    store.set("subscribed", newArr);
-  
-    // Reassign the updated array to subscribed_users
-    subscribed_users = newArr;
-  
-    bot.sendMessage(chatId, "You're unsubscribed from the newsletter!");
-  });
-  
+  const chatId = msg.chat.id;
+
+  if (!subscribed_users || !subscribed_users.includes(chatId)) {
+    bot.sendMessage(chatId, "You're not subscribed to the newsletter!");
+    return;
+  }
+
+  // Filter out the user and update the store
+  const newArr = subscribed_users.filter((userId) => userId !== chatId);
+  store.set("subscribed", newArr);
+
+  bot.sendMessage(chatId, "You're unsubscribed from the newsletter!");
+});
 
 app.post("/poolCreated", async (req, res) => {
   try {
     const { token0, token1, fee, tickSpacing, pool, isV2 } = req.body;
 
-  let info = {
-    token0: token0,
-    token1: token1,
-    fee: fee,
-    tickSpacing: tickSpacing,
-    pool: pool,
-  };
+    let info = {
+      token0: token0,
+      token1: token1,
+      fee: fee,
+      tickSpacing: tickSpacing,
+      pool: pool,
+    };
 
-  console.log(JSON.stringify(info, null, 5));
+    console.log(JSON.stringify(info, null, 5));
 
-  const now = new Date();
-  const options = {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    hour: "numeric",
-    minute: "numeric",
-    second: "numeric",
-    timeZoneName: "short",
-  };
+    const now = new Date();
+    const options = {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "numeric",
+      minute: "numeric",
+      second: "numeric",
+      timeZoneName: "short",
+    };
 
-  const formattedDate = now.toLocaleString("en-US", options);
+    const formattedDate = now.toLocaleString("en-US", options);
 
-  const message = `
+    const message = `
 New Liquidity Pool found on ${isV2 ? "Uniswap V2" : "Uniswap V3"}  Detected!
 
 Token A: ${info.token0}
@@ -126,17 +120,17 @@ Token B: ${info.token1}
 
 Dexscreener info: [Dexscreener](https://dexscreener.com/ethereum/${info.pool})
 Dextools info: [Dextools](https://www.dextools.io/app/en/ether/pair-explorer/${
-    info.pool
-  })
+      info.pool
+    })
 
 Date and Time: ${formattedDate}
 
 Powered by Demeter-Labs
 `;
 
-  console.log(message);
+    console.log(message);
 
-  /* const message = `
+    /* const message = `
 New Liquidity Pool found on ${isV2 ? 'Uniswap V2' : 'Uniswap V3'}  Detected!
 
 Token A: ${info.token0}
@@ -148,9 +142,9 @@ Dextools info: [Dextools](https://www.dextools.io/app/en/ether/pair-explorer/${i
 Powered by Demeter-Labs
 `; */
 
-  await sendToTelegram(message);
+    await sendToTelegram(message);
 
-  res.status(200).json({ success: true });
+    res.status(200).json({ success: true });
   } catch (error) {
     console.error("Error processing /poolCreated: ", error);
     res.status(500).json({ success: false, error: "Internal Server Error" });
@@ -159,6 +153,12 @@ Powered by Demeter-Labs
 
 async function sendToTelegram(message) {
     const apiUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+  
+    // Check if subscribed_users is an array
+    if (!Array.isArray(subscribed_users)) {
+      console.error("subscribed_users is not an array:", subscribed_users);
+      return;
+    }
   
     // Iterate over all subscribed users and send the message
     for (const chatId of subscribed_users) {
@@ -175,7 +175,10 @@ async function sendToTelegram(message) {
         const data = await response.json();
   
         if (!data.ok) {
-          console.error(`Failed to send message to Telegram user ${chatId}:`, data);
+          console.error(
+            `Failed to send message to Telegram user ${chatId}:`,
+            data
+          );
         }
       } catch (error) {
         console.error(`Error sending message to Telegram user ${chatId}:`, error);
