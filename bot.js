@@ -152,40 +152,33 @@ Powered by Demeter-Labs
 });
 
 async function sendToTelegram(message) {
-    const apiUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
-  
-    // Check if subscribed_users is an array
-    if (!Array.isArray(subscribed_users)) {
-      console.error("subscribed_users is not an array:", subscribed_users);
-      return;
-    }
-  
-    // Iterate over all subscribed users and send the message
-    for (const chatId of subscribed_users) {
-      const params = {
-        chat_id: chatId,
-        text: message,
-      };
-  
-      try {
-        const response = await fetch(`${apiUrl}?${new URLSearchParams(params)}`, {
-          method: "GET",
-        });
-  
-        const data = await response.json();
-  
-        if (!data.ok) {
-          console.error(
-            `Failed to send message to Telegram user ${chatId}:`,
-            data
-          );
-        }
-      } catch (error) {
-        console.error(`Error sending message to Telegram user ${chatId}:`, error);
+  const apiUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+
+  // Iterate over all subscribed users and send the message
+  for (const chatId of subscribed_users) {
+    const params = {
+      chat_id: chatId,
+      text: message,
+    };
+
+    try {
+      const response = await fetch(`${apiUrl}?${new URLSearchParams(params)}`, {
+        method: "GET",
+      });
+
+      const data = await response.json();
+
+      if (!data.ok) {
+        console.error(
+          `Failed to send message to Telegram user ${chatId}:`,
+          data
+        );
       }
+    } catch (error) {
+      console.error(`Error sending message to Telegram user ${chatId}:`, error);
     }
   }
-  
+}
 
 const uniswapV3Contract = new ethers.Contract(
   uniswapV3ContractAddress,
